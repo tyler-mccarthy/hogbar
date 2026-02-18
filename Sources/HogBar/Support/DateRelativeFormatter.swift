@@ -1,6 +1,6 @@
 import Foundation
 
-final class DateRelativeFormatter: Sendable {
+final class DateRelativeFormatter {
     private let formatter: RelativeDateTimeFormatter
 
     init() {
