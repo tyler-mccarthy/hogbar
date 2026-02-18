@@ -81,7 +81,7 @@ final class PostHogProjectsServiceTests: XCTestCase {
 }
 
 final class URLProtocolStub: URLProtocol {
-    static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
     override class func canInit(with request: URLRequest) -> Bool {
         true
