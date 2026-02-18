@@ -40,7 +40,7 @@ struct PostHogOrganisationsResponse: Decodable, Equatable, Sendable {
 
         var organisation: PostHogOrganisation {
             let finalName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
-            PostHogOrganisation(
+            return PostHogOrganisation(
                 id: id.value,
                 name: (finalName?.isEmpty == false ? finalName : nil) ?? "Organisation \(id.value)"
             )
