@@ -53,7 +53,8 @@ struct PostHogProjectsResponse: Decodable, Equatable, Sendable {
         }
 
         var project: PostHogProject {
-            let finalName = name?.isEmpty == false ? name! : "Project \(id.value)"
+            let trimmedName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let finalName = (trimmedName?.isEmpty == false ? trimmedName : nil) ?? "Project \(id.value)"
             let finalOrganisationID = organisationID?.value ?? "unknown"
             return PostHogProject(id: id.value, name: finalName, organisationID: finalOrganisationID)
         }

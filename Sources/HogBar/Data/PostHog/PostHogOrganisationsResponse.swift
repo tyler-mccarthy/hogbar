@@ -39,9 +39,10 @@ struct PostHogOrganisationsResponse: Decodable, Equatable, Sendable {
         let name: String?
 
         var organisation: PostHogOrganisation {
+            let finalName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
             PostHogOrganisation(
                 id: id.value,
-                name: name?.isEmpty == false ? name! : "Organisation \(id.value)"
+                name: (finalName?.isEmpty == false ? finalName : nil) ?? "Organisation \(id.value)"
             )
         }
     }

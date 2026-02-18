@@ -5,6 +5,7 @@ final class ActiveUsersCoordinator {
     private let statusBarDisplay: any StatusBarDisplaying
     private let refreshIntervalSeconds: TimeInterval
     private let mockProvider: any ActiveUsersProviding
+    private let postHogProviderFactory: @Sendable (PostHogConfiguration) -> any ActiveUsersProviding
 
     private var refreshTask: Task<Void, Never>?
     private var activeProvider: any ActiveUsersProviding
@@ -16,11 +17,15 @@ final class ActiveUsersCoordinator {
     init(
         statusBarDisplay: any StatusBarDisplaying,
         refreshIntervalSeconds: TimeInterval = 60,
-        mockProvider: any ActiveUsersProviding = MockActiveUsersProvider()
+        mockProvider: any ActiveUsersProviding = MockActiveUsersProvider(),
+        postHogProviderFactory: @escaping @Sendable (PostHogConfiguration) -> any ActiveUsersProviding = { configuration in
+            PostHogActiveUsersProvider(configuration: configuration)
+        }
     ) {
         self.statusBarDisplay = statusBarDisplay
         self.refreshIntervalSeconds = max(5, refreshIntervalSeconds)
         self.mockProvider = mockProvider
+        self.postHogProviderFactory = postHogProviderFactory
         self.activeProvider = mockProvider
         statusBarDisplay.apply(snapshot: nil, errorMessage: nil, appState: appState)
     }
@@ -78,7 +83,7 @@ final class ActiveUsersCoordinator {
         case .authenticating:
             statusBarDisplay.apply(snapshot: latestSnapshot, errorMessage: nil, appState: appState)
         case .authenticated(let session):
-            activeProvider = PostHogActiveUsersProvider(configuration: session.configuration)
+            activeProvider = postHogProviderFactory(session.configuration)
             selectedProject = session.selectedProject
             latestSnapshot = nil
             statusBarDisplay.apply(snapshot: nil, errorMessage: nil, appState: appState)

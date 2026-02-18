@@ -2,7 +2,7 @@ import Foundation
 
 @MainActor
 final class SessionController {
-    private let projectsService: PostHogProjectsService
+    private let projectsService: any PostHogProjectsServicing
     private let activeWindowMinutes: Int
     private let queryOverride: String?
 
@@ -10,7 +10,7 @@ final class SessionController {
     private(set) var suggestedHostValue: String?
 
     init(
-        projectsService: PostHogProjectsService = PostHogProjectsService(),
+        projectsService: any PostHogProjectsServicing = PostHogProjectsService(),
         activeWindowMinutes: Int = 15,
         queryOverride: String? = nil,
         suggestedHostValue: String? = nil

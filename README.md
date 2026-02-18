@@ -2,7 +2,7 @@
 
 HogBar is a macOS menu bar application written in Swift that shows active users in your application at a glance.
 
-The current default data source is a realistic mock provider so you can run and explore the app without any external service dependency. A PostHog HogQL data provider is included and can be enabled through environment variables.
+The default mode uses realistic mock data so you can run and explore the app without any external service dependency. You can then sign in to PostHog from a login popup and switch between projects that belong to your account.
 
 ## Features
 
@@ -11,7 +11,9 @@ The current default data source is a realistic mock provider so you can run and 
 - Manual refresh action
 - Automatic refresh loop
 - Fake data mode enabled by default
-- PostHog HogQL provider ready for real data
+- Login popup for PostHog host URL and personal API key
+- Project switching submenu for authenticated PostHog projects
+- Sign out action that returns to mock mode
 
 ## Project layout
 
@@ -41,20 +43,30 @@ For day-to-day development, opening the package in Xcode is usually the easiest 
 
 Without any environment configuration, HogBar starts in mock mode and displays generated active users.
 
-## Enable PostHog HogQL provider
+## Sign in and switch projects
 
-Set these environment variables before launching the app:
+1. Open the HogBar menu.
+2. Select `Sign in to PostHog…`.
+3. Enter your PostHog host URL and personal API key.
+4. After successful authentication, use `Switch project` in the menu to toggle between projects.
+5. Select `Sign out` to return to mock mode.
 
-- `HOGBAR_POSTHOG_HOST`
-- `HOGBAR_POSTHOG_PROJECT_ID`
-- `HOGBAR_POSTHOG_API_KEY`
+HogBar fetches organisations and projects accessible to the authenticated user and uses the selected project when running the active-user HogQL query.
+
+## Optional environment bootstrap
+
+You can still preconfigure PostHog for automatic sign-in at launch:
+
+- `HOGBAR_POSTHOG_HOST` required
+- `HOGBAR_POSTHOG_API_KEY` required
 
 Optional environment variables:
 
+- `HOGBAR_POSTHOG_PROJECT_ID` preferred initial project when available
 - `HOGBAR_POSTHOG_ACTIVE_WINDOW_MINUTES` default: `15`
 - `HOGBAR_POSTHOG_QUERY_OVERRIDE` custom HogQL query string
 
-When all required PostHog variables are present, HogBar automatically switches from mock mode to the PostHog provider.
+When required variables are present, HogBar attempts automatic sign-in using those values.
 
 ## Example HogQL strategy
 

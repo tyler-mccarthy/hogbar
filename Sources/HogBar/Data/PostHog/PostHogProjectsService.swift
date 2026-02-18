@@ -1,5 +1,9 @@
 import Foundation
 
+protocol PostHogProjectsServicing: Sendable {
+    func authenticate(configuration: PostHogConfiguration) async throws -> PostHogSession
+}
+
 enum PostHogProjectsServiceError: Error, Equatable, LocalizedError {
     case invalidHost
     case unauthorised
@@ -23,7 +27,7 @@ enum PostHogProjectsServiceError: Error, Equatable, LocalizedError {
     }
 }
 
-actor PostHogProjectsService {
+actor PostHogProjectsService: PostHogProjectsServicing {
     private let session: URLSession
     private let decoder: JSONDecoder
 
