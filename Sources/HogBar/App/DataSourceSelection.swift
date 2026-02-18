@@ -11,12 +11,19 @@ enum DataSourceSelection: Sendable, Equatable {
         return .mock
     }
 
-    func makeProvider(session: URLSession = .shared) -> any ActiveUsersProviding {
+    var preferredHostValue: String? {
         switch self {
         case .mock:
-            return MockActiveUsersProvider()
+            return nil
         case .postHog(let configuration):
-            return PostHogActiveUsersProvider(configuration: configuration, session: session)
+            return configuration.hostURL.absoluteString
         }
+    }
+
+    var postHogConfiguration: PostHogConfiguration? {
+        if case .postHog(let configuration) = self {
+            return configuration
+        }
+        return nil
     }
 }

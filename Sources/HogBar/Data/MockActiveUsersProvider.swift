@@ -16,7 +16,7 @@ actor MockActiveUsersProvider: ActiveUsersProviding {
         ("u_008", "Charlie Singh", "charlie.singh@example.com"),
     ]
 
-    func fetchActiveUsers() async throws -> ActiveUsersSnapshot {
+    func fetchActiveUsers(project: PostHogProject?) async throws -> ActiveUsersSnapshot {
         refreshCount += 1
         let now = Date()
         let startIndex = refreshCount % baseUsers.count

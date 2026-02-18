@@ -2,19 +2,27 @@ import Foundation
 
 @MainActor
 final class ActiveUsersCoordinator {
-    private let provider: any ActiveUsersProviding
-    private let statusBarController: StatusBarController
+    private let statusBarDisplay: any StatusBarDisplaying
     private let refreshIntervalSeconds: TimeInterval
+    private let mockProvider: any ActiveUsersProviding
+
     private var refreshTask: Task<Void, Never>?
+    private var activeProvider: any ActiveUsersProviding
+    private var selectedProject: PostHogProject?
+    private var latestSnapshot: ActiveUsersSnapshot?
+    private var latestErrorMessage: String?
+    private var appState: AppState = .mockMode
 
     init(
-        provider: any ActiveUsersProviding,
-        statusBarController: StatusBarController,
-        refreshIntervalSeconds: TimeInterval = 60
+        statusBarDisplay: any StatusBarDisplaying,
+        refreshIntervalSeconds: TimeInterval = 60,
+        mockProvider: any ActiveUsersProviding = MockActiveUsersProvider()
     ) {
-        self.provider = provider
-        self.statusBarController = statusBarController
+        self.statusBarDisplay = statusBarDisplay
         self.refreshIntervalSeconds = max(5, refreshIntervalSeconds)
+        self.mockProvider = mockProvider
+        self.activeProvider = mockProvider
+        statusBarDisplay.apply(snapshot: nil, errorMessage: nil, appState: appState)
     }
 
     func start() {
@@ -27,14 +35,17 @@ final class ActiveUsersCoordinator {
                 return
             }
 
-            await self.refreshOnce()
+            await self.refreshNow()
             while !Task.isCancelled {
                 let sleepNanoseconds = UInt64(self.refreshIntervalSeconds * 1_000_000_000)
                 try? await Task.sleep(nanoseconds: sleepNanoseconds)
                 if Task.isCancelled {
                     break
                 }
-                await self.refreshOnce()
+                if case .authenticating = self.appState {
+                    continue
+                }
+                await self.refreshNow()
             }
         }
     }
@@ -49,16 +60,56 @@ final class ActiveUsersCoordinator {
             guard let self else {
                 return
             }
-            await self.refreshOnce()
+            await self.refreshNow()
         }
     }
 
-    private func refreshOnce() async {
+    func applyState(_ state: AppState) {
+        appState = state
+        latestErrorMessage = nil
+
+        switch state {
+        case .mockMode:
+            activeProvider = mockProvider
+            selectedProject = nil
+            latestSnapshot = nil
+            statusBarDisplay.apply(snapshot: nil, errorMessage: nil, appState: appState)
+            requestManualRefresh()
+        case .authenticating:
+            statusBarDisplay.apply(snapshot: latestSnapshot, errorMessage: nil, appState: appState)
+        case .authenticated(let session):
+            activeProvider = PostHogActiveUsersProvider(configuration: session.configuration)
+            selectedProject = session.selectedProject
+            latestSnapshot = nil
+            statusBarDisplay.apply(snapshot: nil, errorMessage: nil, appState: appState)
+            requestManualRefresh()
+        case .error(let message):
+            activeProvider = mockProvider
+            selectedProject = nil
+            latestErrorMessage = message
+            statusBarDisplay.apply(snapshot: latestSnapshot, errorMessage: message, appState: appState)
+            requestManualRefresh()
+        }
+    }
+
+    private func refreshNow() async {
+        if case .authenticating = appState {
+            statusBarDisplay.apply(snapshot: latestSnapshot, errorMessage: latestErrorMessage, appState: appState)
+            return
+        }
+
         do {
-            let snapshot = try await provider.fetchActiveUsers()
-            statusBarController.update(snapshot: snapshot)
+            let snapshot = try await activeProvider.fetchActiveUsers(project: selectedProject)
+            latestSnapshot = snapshot
+            latestErrorMessage = nil
+            statusBarDisplay.apply(snapshot: snapshot, errorMessage: nil, appState: appState)
         } catch {
-            statusBarController.updateError(error)
+            latestErrorMessage = error.localizedDescription
+            statusBarDisplay.apply(
+                snapshot: latestSnapshot,
+                errorMessage: error.localizedDescription,
+                appState: appState
+            )
         }
     }
 }

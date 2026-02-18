@@ -2,6 +2,7 @@ import Foundation
 
 enum PostHogActiveUsersProviderError: Error, Equatable {
     case invalidEndpoint
+    case missingProject
     case unexpectedStatusCode(Int)
 }
 
@@ -28,14 +29,18 @@ actor PostHogActiveUsersProvider: ActiveUsersProviding {
         self.decoder = decoder
     }
 
-    func fetchActiveUsers() async throws -> ActiveUsersSnapshot {
+    func fetchActiveUsers(project: PostHogProject?) async throws -> ActiveUsersSnapshot {
+        guard let project else {
+            throw PostHogActiveUsersProviderError.missingProject
+        }
+
         let hogQL = configuration.queryOverride ?? queryBuilder.build(windowMinutes: configuration.activeWindowMinutes)
         let requestBody = PostHogQueryRequest(
             query: HogQLQuery(query: hogQL),
             name: "hogbar_active_users"
         )
 
-        guard let endpointURL = endpointURL() else {
+        guard let endpointURL = endpointURL(projectID: project.id) else {
             throw PostHogActiveUsersProviderError.invalidEndpoint
         }
 
@@ -59,7 +64,7 @@ actor PostHogActiveUsersProvider: ActiveUsersProviding {
         return ActiveUsersSnapshot(users: users, fetchedAt: now, sourceName: sourceName)
     }
 
-    private func endpointURL() -> URL? {
+    private func endpointURL(projectID: String) -> URL? {
         guard var components = URLComponents(url: configuration.hostURL, resolvingAgainstBaseURL: false) else {
             return nil
         }
@@ -67,8 +72,9 @@ actor PostHogActiveUsersProvider: ActiveUsersProviding {
         let existingPath = components.path
             .split(separator: "/")
             .map(String.init)
-        let finalPath = (existingPath + ["api", "projects", configuration.projectID, "query"]).joined(separator: "/")
+        let finalPath = (existingPath + ["api", "projects", projectID, "query"]).joined(separator: "/")
         components.path = "/\(finalPath)"
+        components.query = nil
         return components.url
     }
 }
